@@ -1,0 +1,46 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+}
+
+
+android {
+    compileSdkVersion 31
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+        }
+    }
+
+    defaultConfig {
+        applicationId "org.androidaudioplugin.samples.byod"
+        minSdkVersion    29
+        targetSdkVersion 31
+        externalNativeBuild {
+            cmake {
+                arguments "-DJUCE_DIR=${System.env.JUCE_DIR != null ? System.env.JUCE_DIR : "$projectDir/../modules/JUCE"}", "-DAAP_DIR=${System.env.AAP_DIR != null ? System.env.AAP_DIR : "$projectDir/../../android-audio-plugin-framework"}", "-DAAP_JUCE_DIR=${System.env.AAP_JUCE_DIR != null ? System.env.AAP_JUCE_DIR : "$projectDir/../../aap-juce"}", "-DANDROID_STL=c++_static", "-DANDROID_CPP_FEATURES=exceptions rtti"
+            }
+        }
+    }
+
+    sourceSets {
+        main.java.srcDirs +=
+            ["../external/BYOD/modules/JUCE/modules/juce_gui_basics/native/javaopt/app"]
+        main.res.srcDirs +=
+            []
+    }
+
+    dependencies {
+        implementation "androidx.startup:startup-runtime:1.1.0"
+        implementation "org.androidaudioplugin:androidaudioplugin:0.6.21"
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+}
+dependencies {
+    implementation "androidx.core:core-ktx:1.7.0"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+}
+

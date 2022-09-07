@@ -1,0 +1,30 @@
+diff --git a/modules/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp b/modules/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
+index ad4bb55..2a3727d 100644
+--- a/modules/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
++++ b/modules/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
+@@ -64,7 +64,11 @@ void checkOpenGLStats (juce::OpenGLContext& ctx, int& openGLMajorVersion, int& o
+         false);
+ 
+     while (waiting)
+-        juce::MessageManager::getInstance()->runDispatchLoopUntil (100);
++        juce::MessageManager::getInstance()->callAsync([&]() {
++            timespec ts{}, remainder{};
++            ts.tv_nsec = 100 * 1000 * 1000;
++            nanosleep(&ts, &remainder);
++        });
+ }
+ } // namespace
+ #endif
+diff --git a/modules/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h b/modules/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
+index 41b54d4..d0ad53f 100644
+--- a/modules/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
++++ b/modules/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
+@@ -16,6 +16,8 @@ constexpr std::string_view getOSDescription()
+     return "Mac";
+ #elif JUCE_IOS
+     return "IOS";
++#elif JUCE_ANDROID
++    return "Android";
+ #elif JUCE_LINUX
+ #if JUCE_64BIT
+     return "Linux64";

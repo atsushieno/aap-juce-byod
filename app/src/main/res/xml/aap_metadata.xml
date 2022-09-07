@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugins xmlns="urn:org.androidaudioplugin.core" xmlns:pp="urn:org.androidaudioplugin.port">
+  <plugin name="BYOD" category="Effect" author="Suzuki Kengo" manufacturer="https://suzuki-kengo.dev"
+          unique-id="juceaap:53727662" library="libBYOD_Standalone.so"
+          entrypoint="GetJuceAAPFactoryStandalone" assets="">
+    <ports>
+      <port name="size" direction="input" pp:maximum="1.0" content="other"/>
+      <port name="damp" direction="input" pp:maximum="1.0" content="other"/>
+      <port name="width" direction="input" pp:maximum="1.0" content="other"/>
+      <port name="dw" direction="input" pp:maximum="1.0" content="other"/>
+      <port name="freeze" direction="input" pp:default="0.0" pp:maximum="1.0"
+            content="other"/>
+      <port direction="output" content="audio" name="Left"/>
+      <port direction="output" content="audio" name="Right"/>
+      <port direction="input" content="audio" name="Left"/>
+      <port direction="input" content="audio" name="Right"/>
+    </ports>
+  </plugin>
+</plugins>

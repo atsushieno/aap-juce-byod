@@ -1,0 +1,178 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index a2975a6..9760f41 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -103,6 +103,24 @@ if(BYOD_BUILD_CLAP AND NOT IOS)
+     )
+ endif()
+ 
++# begin AAP specifics 1. -->
++
++# They are needed in desktop too, for generate-aap-metadata.
++include_directories(
++        "../eigen"
++        "modules/RTNeural"
++        "modules/RTNeural/modules/xsimd/include"
++        "modules/magic_enum/include"
++        "modules/rapidfuzz-cpp"
++        "${AAP_DIR}/include"
++        "${AAP_JUCE_DIR}/modules"
++        )
++
++message("AAP_DIR: ${AAP_DIR}")
++message("AAP_JUCE_DIR: ${AAP_JUCE_DIR}")
++juce_add_modules(${AAP_JUCE_DIR}/modules/juceaap_audio_plugin_client)
++# end AAP specifics 1.
++
+ juce_generate_juce_header(BYOD)
+ add_subdirectory(src)
+ include_directories(src)
+@@ -126,7 +144,30 @@ if ((NOT IOS) AND BYOD_USE_LOCAL_PRESET_SERVER)
+     target_compile_definitions(BYOD PRIVATE BYOD_USE_LOCAL_PRESET_SERVER=1)
+ endif()
+ 
+-target_link_libraries(BYOD PRIVATE juce_plugin_modules)
++# begin AAP specifics 2. -->
++# begin Android specifics -->
++# It is not beautiful, but there does not seem to be any way to add custom include directory for modules.
++
++if (ANDROID)
++
++# dependencies
++find_library(log "log")
++find_library(android "android")
++find_library(glesv2 "GLESv2")
++find_library(egl "EGL")
++set(cpufeatures_lib "cpufeatures")
++set(oboe_lib "oboe")
++
++target_include_directories(BYOD PRIVATE
++        "${ANDROID_NDK}/sources/android/cpufeatures"
++        "${OBOE_DIR}/include"
++        )
++
++endif (ANDROID)
++# <-- end Android specifics
++# <-- end AAP specifics 2
++
++target_link_libraries(BYOD PRIVATE juce_plugin_modules juceaap_audio_plugin_client)
+ 
+ if(IOS)
+     message(STATUS "Setting iOS-specific properties...")
+diff --git a/modules/JUCE b/modules/JUCE
+--- a/modules/JUCE
++++ b/modules/JUCE
+@@ -1 +1 @@
+-Subproject commit c748c1efd04e7c092fe03f298db2f64636116b51
++Subproject commit c748c1efd04e7c092fe03f298db2f64636116b51-dirty
+diff --git a/modules/chowdsp_utils b/modules/chowdsp_utils
+--- a/modules/chowdsp_utils
++++ b/modules/chowdsp_utils
+@@ -1 +1 @@
+-Subproject commit 2a33ba98fa6c718db817eaf38f6ded71dbea6983
++Subproject commit 2a33ba98fa6c718db817eaf38f6ded71dbea6983-dirty
+diff --git a/src/gui/presets/PresetsComp.cpp b/src/gui/presets/PresetsComp.cpp
+index 015b056..e9eb392 100644
+--- a/src/gui/presets/PresetsComp.cpp
++++ b/src/gui/presets/PresetsComp.cpp
+@@ -198,16 +198,25 @@ int PresetsComp::addBasicPresetOptions (PopupMenu* menu, int optionID)
+                                               auto presetFile = currentPreset->getPresetFile();
+                                               if (! (presetFile.existsAsFile() && presetFile.hasFileExtension (PresetConstants::presetExt)))
+                                               {
+-                                                  NativeMessageBox::showMessageBox (MessageBoxIconType::WarningIcon, "Preset Deletion", "Unable to find preset file!");
++                                                  NativeMessageBox::showMessageBoxAsync (MessageBoxIconType::WarningIcon, "Preset Deletion", "Unable to find preset file!", nullptr, nullptr);
+                                                   return;
+                                               }
+ 
+-                                              if (NativeMessageBox::showOkCancelBox (MessageBoxIconType::QuestionIcon, "Preset Deletion", "Are you sure you want to delete this preset? This operation cannot be undone."))
+-                                              {
++                                              std::function<void(int)> cbFunc = [&](int returnValue) {
++                                                  if (returnValue != 1)
++                                                      return;
+                                                   presetFile.deleteFile();
+                                                   manager.loadDefaultPreset();
+                                                   manager.loadUserPresetsFromFolder (manager.getUserPresetPath());
+-                                              }
++                                              };
++                                              class MyCallback : public ModalComponentManager::Callback {
++                                                  std::function<void(int)> f;
++                                                  void modalStateFinished (int returnValue) { f(returnValue); }
++                                              public:
++                                                  MyCallback(std::function<void(int)> func) : f(func) {}
++                                              };
++                                              MyCallback cb{cbFunc};
++                                              NativeMessageBox::showOkCancelBox (MessageBoxIconType::QuestionIcon, "Preset Deletion", "Are you sure you want to delete this preset? This operation cannot be undone.", nullptr, &cb);
+                                           }
+                                       });
+     }
+@@ -352,11 +361,22 @@ void PresetsComp::savePreset (const PresetSaveInfo& saveInfo)
+         {
+             const String warningBoxTitle = "Preset Save Warning!";
+             const String warningBoxMessage = "You are about to overwrite an existing preset! Are you sure you want to continue?";
+-            if (NativeMessageBox::showYesNoBox (MessageBoxIconType::WarningIcon, warningBoxTitle, warningBoxMessage) == 0)
+-                return;
++            std::function<void(int)> cbFunc = [&](int returnValue) {
++                if (returnValue == 0)
++                    return;
++                presetMgr.saveUserPreset (sInfo.name, sInfo.category, sInfo.isPublic, sInfo.presetID);
++            };
++            class MyCallback : public ModalComponentManager::Callback {
++                std::function<void(int)> f;
++                void modalStateFinished (int returnValue) { f(returnValue); }
++            public:
++                MyCallback(std::function<void(int)> func) : f(func) {}
++            };
++            MyCallback cb{cbFunc};
++            NativeMessageBox::showYesNoBox (MessageBoxIconType::WarningIcon, warningBoxTitle, warningBoxMessage, nullptr, &cb);
+         }
+-
+-        presetMgr.saveUserPreset (sInfo.name, sInfo.category, sInfo.isPublic, sInfo.presetID);
++        else
++            presetMgr.saveUserPreset (sInfo.name, sInfo.category, sInfo.isPublic, sInfo.presetID);
+     };
+ 
+     auto presetPath = manager.getUserPresetPath();
+diff --git a/src/gui/presets/PresetsSaveDialog.cpp b/src/gui/presets/PresetsSaveDialog.cpp
+index 4019f24..74d5584 100644
+--- a/src/gui/presets/PresetsSaveDialog.cpp
++++ b/src/gui/presets/PresetsSaveDialog.cpp
+@@ -71,7 +71,7 @@ void PresetsSaveDialog::prepareToShow (const chowdsp::Preset* presetToEdit, cons
+         const auto nameText = nameLabel.getText (true);
+         if (nameText.isEmpty())
+         {
+-            NativeMessageBox::showMessageBox (MessageBoxIconType::WarningIcon, "Preset Save Error!", "Preset name must not be empty");
++            NativeMessageBox::showMessageBoxAsync (MessageBoxIconType::WarningIcon, "Preset Save Error!", "Preset name must not be empty", nullptr, nullptr);
+             return;
+         }
+ 
+diff --git a/src/headless/tests/PresetsTest.cpp b/src/headless/tests/PresetsTest.cpp
+index e6e46ac..dc134e9 100644
+--- a/src/headless/tests/PresetsTest.cpp
++++ b/src/headless/tests/PresetsTest.cpp
+@@ -46,7 +46,7 @@ public:
+         {
+             std::cout << "Loading preset: " << plugin.getProgramName (i) << std::endl;
+             plugin.setCurrentProgram (i);
+-            MessageManager::getInstance()->runDispatchLoopUntil (50);
++            //MessageManager::getInstance()->runDispatchLoopUntil (50);
+             expectEquals (plugin.getCurrentProgram(), i, "Current preset index is incorrect!");
+         }
+ 
+diff --git a/src/state/presets/PresetManager.cpp b/src/state/presets/PresetManager.cpp
+index 635b251..a3b2172 100644
+--- a/src/state/presets/PresetManager.cpp
++++ b/src/state/presets/PresetManager.cpp
+@@ -12,11 +12,11 @@ void showFailureMessage (const String& title, const String& message)
+     MessageManager::callAsync (
+         [title, message]
+         {
+-            NativeMessageBox::show (MessageBoxOptions()
++            NativeMessageBox::showAsync (MessageBoxOptions()
+                                         .withIconType (MessageBoxIconType::WarningIcon)
+                                         .withTitle (title)
+                                         .withMessage (message)
+-                                        .withButton ("OK"));
++                                        .withButton ("OK"), [](int code){});
+         });
+ }
+ } // namespace

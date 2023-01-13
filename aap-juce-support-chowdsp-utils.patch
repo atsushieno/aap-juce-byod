@@ -1,8 +1,8 @@
-diff --git a/modules/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp b/modules/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
-index ad4bb55..2a3727d 100644
---- a/modules/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
-+++ b/modules/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
-@@ -64,7 +64,11 @@ void checkOpenGLStats (juce::OpenGLContext& ctx, int& openGLMajorVersion, int& o
+diff --git a/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp b/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
+index ec8bfb5..688b3f6 100644
+--- a/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
++++ b/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
+@@ -74,7 +74,11 @@ void checkOpenGLStats (juce::OpenGLContext& ctx, int& openGLMajorVersion, int& o
          false);
  
      while (waiting)
@@ -15,16 +15,34 @@ index ad4bb55..2a3727d 100644
  }
  } // namespace
  #endif
-diff --git a/modules/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h b/modules/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
-index 41b54d4..d0ad53f 100644
---- a/modules/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
-+++ b/modules/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
-@@ -16,6 +16,8 @@ constexpr std::string_view getOSDescription()
-     return "Mac";
+diff --git a/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h b/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
+index 106c005..ddedf3b 100644
+--- a/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
++++ b/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
+@@ -18,6 +18,8 @@ namespace SystemInfo
+         return "Mac";
  #elif JUCE_IOS
-     return "IOS";
+         return "IOS";
 +#elif JUCE_ANDROID
 +    return "Android";
  #elif JUCE_LINUX
  #if JUCE_64BIT
-     return "Linux64";
+         return "Linux64";
+diff --git a/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp b/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp
+index 3b195bf..cfa91dd 100644
+--- a/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp
++++ b/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp
+@@ -254,11 +254,11 @@ int PresetsComp::addSavePresetOptions (int optionID)
+                                                   auto presetFile = curPreset->getPresetFile();
+                                                   if (! (presetFile.existsAsFile() && presetFile.hasFileExtension (presetExt)))
+                                                   {
+-                                                      juce::NativeMessageBox::showMessageBox (juce::MessageBoxIconType::WarningIcon, "Preset Deletion", "Unable to find preset file!");
++                                                      //juce::NativeMessageBox::showMessageBox (juce::MessageBoxIconType::WarningIcon, "Preset Deletion", "Unable to find preset file!");
+                                                       return;
+                                                   }
+ 
+-                                                  if (juce::NativeMessageBox::showOkCancelBox (juce::MessageBoxIconType::QuestionIcon, "Preset Deletion", "Are you sure you want to delete this preset? This operation cannot be undone."))
++                                                  if (true)//juce::NativeMessageBox::showOkCancelBox (juce::MessageBoxIconType::QuestionIcon, "Preset Deletion", "Are you sure you want to delete this preset? This operation cannot be undone."))
+                                                   {
+                                                       presetFile.deleteFile();
+                                                       manager.loadDefaultPreset();

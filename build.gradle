@@ -1,21 +1,28 @@
 
 
 buildscript {
-    ext.kotlin_version = '1.6.10'
+    ext.kotlin_version = '1.7.10'
+    ext.dokka_version = '1.7.20'
+    ext.aap_version = '0.7.5-pre'
+    ext.ndk_version = '25.1.8937393'
+    ext.enable_asan = false
+
     repositories {
         google()
         mavenCentral()
+        maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.3.0-alpha07'
+        classpath 'com.android.tools.build:gradle:7.3.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:$dokka_version"
     }
 }
 
 allprojects {
     repositories {
-        mavenLocal()
         google()
         mavenCentral()
+        mavenLocal()
     }
 }

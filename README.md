@@ -14,7 +14,8 @@ I didn't fork BYOD to just alter the commit hash for RTNeural, so you will have 
 cd external/BYOD/modules/RTNeural
 git remote add atsushieno https://github.com/atsushieno/RTNeural.git
 git fetch atsushieno bump-xsimd-for-android
-git checkout fbdef19
+git switch bump-xsimd-for-android
+git submodule update --recursive --init
 cd ../../../..
 
 make

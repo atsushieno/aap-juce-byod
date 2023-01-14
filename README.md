@@ -2,6 +2,8 @@
 
 It is a port of [Chowdhury-DSP/BYOD](https://github.com/Chowdhury-DSP/BYOD) to [Audio Plugins for Android](https://github.com/atsushieno/aap-core) using [aap-juce](https://github.com/atsushieno/aap-juce).
 
+![aap-juce-byod on aaphostsample](docs/images/aap-juce-byod-sshot.png)
+
 ## Current issues
 
 - MainActivity fails to launch

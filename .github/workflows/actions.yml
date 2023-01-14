@@ -39,6 +39,13 @@ jobs:
                  graphviz cmake ninja-build
     - name: stupid NDK setup workaround for GitHub Actions
       run: sudo mkdir -p /usr/local/lib/android/sdk/ndk && sudo chmod 777 /usr/local/lib/android/sdk/ndk
+    - name: replace RTNeural to private fork that contains Android fix
+      run: |
+        cd external/BYOD/modules/RTNeural
+        git remote add atsushieno https://github.com/atsushieno/RTNeural.git
+        git pull atsushieno bump-xsimd-for-android
+        git switch bump-xsimd-for-android
+        cd ../../../..
     - name: build
       run: make
     - name: upload-artifact
@@ -46,4 +53,3 @@ jobs:
       with:
         name: release-builds
         path: release-builds
-

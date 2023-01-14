@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index ec1e4bd..5e91041 100644
+index ec1e4bd..a027da6 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -113,6 +113,28 @@ if(BYOD_BUILD_CLAP)
+@@ -113,6 +113,29 @@ if(BYOD_BUILD_CLAP)
      )
  endif()
  
@@ -19,6 +19,7 @@ index ec1e4bd..5e91041 100644
 +        "${AAP_JUCE_DIR}/modules"
 +        )
 +
++add_definitions([[-DJUCE_PUSH_NOTIFICATIONS_ACTIVITY="com/rmsl/juce/JuceActivity"]])
 +target_compile_definitions(BYOD PUBLIC
 +        JUCEAAP_HAVE_AUDIO_PLAYHEAD_NEW_POSITION_INFO=1
 +)
@@ -31,7 +32,7 @@ index ec1e4bd..5e91041 100644
  juce_generate_juce_header(BYOD)
  add_subdirectory(src)
  include_directories(src)
-@@ -127,7 +149,30 @@ if ((NOT IOS) AND BYOD_USE_LOCAL_PRESET_SERVER)
+@@ -127,7 +150,30 @@ if ((NOT IOS) AND BYOD_USE_LOCAL_PRESET_SERVER)
      target_compile_definitions(BYOD PRIVATE BYOD_USE_LOCAL_PRESET_SERVER=1)
  endif()
  
@@ -63,28 +64,6 @@ index ec1e4bd..5e91041 100644
  
  if(IOS)
      message(STATUS "Setting iOS-specific properties...")
-Submodule modules/RTNeural contains modified content
-Submodule modules/xsimd contains modified content
-diff --git a/modules/RTNeural/modules/xsimd/include/xsimd/arch/xsimd_scalar.hpp b/modules/RTNeural/modules/xsimd/include/xsimd/arch/xsimd_scalar.hpp
-index 31a4d99..33db4c6 100644
---- a/modules/RTNeural/modules/xsimd/include/xsimd/arch/xsimd_scalar.hpp
-+++ b/modules/RTNeural/modules/xsimd/include/xsimd/arch/xsimd_scalar.hpp
-@@ -442,6 +442,7 @@ namespace xsimd
-     }
- 
- #ifdef _GNU_SOURCE
-+#if !ANDROID
-     inline float exp10(const float& x) noexcept
-     {
-         return ::exp10f(x);
-@@ -450,6 +451,7 @@ namespace xsimd
-     {
-         return ::exp10(x);
-     }
-+#endif
- #endif
- 
-     template <class T, class = typename std::enable_if<std::is_scalar<T>::value>::type>
 Submodule modules/chowdsp_utils contains modified content
 diff --git a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp b/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
 index ec8bfb5..688b3f6 100644

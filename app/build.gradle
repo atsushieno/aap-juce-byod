@@ -33,6 +33,8 @@ android {
     }
 
     dependencies {
+        implementation "androidx.core:core-ktx:1.9.0"
+        implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
         implementation "androidx.startup:startup-runtime:1.1.1"
         implementation "org.androidaudioplugin:androidaudioplugin:$aap_version"
     }
@@ -40,9 +42,7 @@ android {
     lintOptions {
         abortOnError false
     }
-}
-dependencies {
-    implementation "androidx.core:core-ktx:1.9.0"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    ndkVersion "$ndk_version"
 }
 

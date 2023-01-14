@@ -43,8 +43,8 @@ jobs:
       run: |
         cd external/BYOD/modules/RTNeural
         git remote add atsushieno https://github.com/atsushieno/RTNeural.git
-        git pull atsushieno bump-xsimd-for-android
-        git switch bump-xsimd-for-android
+        git fetch atsushieno bump-xsimd-for-android
+        git checkout fbdef19
         cd ../../../..
     - name: build
       run: make

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <plugins xmlns="urn:org.androidaudioplugin.core">
-  <plugin name="BYOD" category="Effect" author="chowdsp" manufacturer=""
+  <plugin name="AAP BYOD" category="Effect" author="AAP / chowdsp" manufacturer=""
           unique-id="juceaap:44717530" library="libBYOD_Standalone.so"
           entrypoint="GetJuceAAPFactoryStandalone" assets="">
     <extensions>

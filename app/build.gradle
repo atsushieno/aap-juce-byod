@@ -5,7 +5,7 @@ plugins {
 
 
 android {
-    namespace "org.androidaudioplugin.samples.byod"
+    namespace "org.androidaudioplugin.ports.juce.byod"
     compileSdkVersion 33
     externalNativeBuild {
         cmake {

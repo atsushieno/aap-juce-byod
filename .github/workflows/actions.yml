@@ -5,58 +5,7 @@ on:
   pull_request:
 
 jobs:
-  linux-build:
-    name: build on linux
-    runs-on: ubuntu-20.04
-    steps:
-    - name: checkout
-      uses: actions/checkout@v1
-      with:
-        submodules: recursive
-    - name: cache AVD
-      uses: actions/cache@v3
-      env:
-        cache-name: cache-avd
-      with:
-        path: /Users/runner/.android/gradle/avd
-        key: ${{ runner.os }}-gradle-avd
-    - name: cache gradle caches
-      uses: actions/cache@v3
-      env:
-        cache-name: cache-gradle-caches
-      with:
-        path: /Users/runner/.gradle/caches/
-        key: ${{ runner.os }}-gradle-caches
-    - name: apt update
-      run: |
-        sudo apt-get update
-    - name: set up JDK 11
-      uses: actions/setup-java@v3
-      with:
-        java-version: 11
-        distribution: temurin
-    - name: apt install
-      run: |
-        echo y | sudo apt-get install xvfb wget unzip libc6 \
-                 libcurl3-gnutls-dev  libfreetype6-dev libgcc1 libjpeg-dev \
-                 libpng-dev libstdc++6 libwebkit2gtk-4.0-dev libx11-6 \
-                 libxext6 zlib1g  make g++ mesa-common-dev libasound2-dev \
-                 libjack-jackd2-dev ladspa-sdk \
-                 doxygen libgrpc++-dev libgrpc-dev \
-                 libprotobuf-dev protobuf-compiler protobuf-compiler-grpc \
-                 graphviz cmake ninja-build
-    - name: replace RTNeural to private fork that contains Android fix # FIXME: remove this next time BYOD bumped RTNeural.
-      run: |
-        cd external/BYOD/modules/RTNeural
-        git remote add atsushieno https://github.com/atsushieno/RTNeural.git
-        git fetch atsushieno bump-xsimd-for-android
-        git switch bump-xsimd-for-android
-        git submodule update --init --recursive
-        cd ../../../..
-    - name: build
-      run: make
-    - name: upload-artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: debug apk
-        path: app/build/outputs/apk/debug/*.apk
+  build-dist:
+    # note that usually we recommend to use versioned reference. We do not keep compatibility across commits.
+    uses: atsushieno/aap-juce/.github/workflows/build-dist-with-cmake.yml@main
+

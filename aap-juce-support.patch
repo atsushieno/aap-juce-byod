@@ -1,20 +1,15 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index ec1e4bd..a027da6 100644
+index ec1e4bd..f872b66 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -113,6 +113,29 @@ if(BYOD_BUILD_CLAP)
+@@ -113,6 +113,42 @@ if(BYOD_BUILD_CLAP)
      )
  endif()
  
-+# begin AAP specifics 1. -->
++# begin AAP specifics -->
 +
 +# They are needed in desktop too, for generate-aap-metadata.
 +include_directories(
-+        "../eigen"
-+        #"modules/RTNeural"
-+        #"modules/RTNeural/modules/xsimd/include"
-+        #"modules/magic_enum/include"
-+        #"modules/rapidfuzz-cpp"
 +        "${AAP_DIR}/include"
 +        "${AAP_JUCE_DIR}/modules"
 +        )
@@ -22,12 +17,30 @@ index ec1e4bd..a027da6 100644
 +add_definitions([[-DJUCE_PUSH_NOTIFICATIONS_ACTIVITY="com/rmsl/juce/JuceActivity"]])
 +target_compile_definitions(BYOD PUBLIC
 +        JUCEAAP_HAVE_AUDIO_PLAYHEAD_NEW_POSITION_INFO=1
++        JUCE_PUSH_NOTIFICATIONS=1
 +)
 +
 +message("AAP_DIR: ${AAP_DIR}")
 +message("AAP_JUCE_DIR: ${AAP_JUCE_DIR}")
 +juce_add_modules(${AAP_JUCE_DIR}/modules/juceaap_audio_plugin_client)
-+# end AAP specifics 1.
++
++if (ANDROID)
++    find_library(log "log")
++    find_library(android "android")
++    find_library(glesv2 "GLESv2")
++    find_library(egl "EGL")
++    set(cpufeatures_lib "cpufeatures")
++    set(oboe_lib "oboe")
++
++    target_include_directories(BYOD PRIVATE
++            "${ANDROID_NDK}/sources/android/cpufeatures"
++            #"${OBOE_DIR}/include"
++            )
++
++    target_link_libraries(BYOD PRIVATE juceaap_audio_plugin_client)
++
++endif (ANDROID)
++# <-- end AAP specifics
 +
  juce_generate_juce_header(BYOD)
  add_subdirectory(src)
@@ -41,29 +54,10 @@ index ec1e4bd..a027da6 100644
 +# begin Android specifics -->
 +# It is not beautiful, but there does not seem to be any way to add custom include directory for modules.
 +
-+if (ANDROID)
 +
-+# dependencies
-+find_library(log "log")
-+find_library(android "android")
-+find_library(glesv2 "GLESv2")
-+find_library(egl "EGL")
-+set(cpufeatures_lib "cpufeatures")
-+set(oboe_lib "oboe")
 +
-+target_include_directories(BYOD PRIVATE
-+        "${ANDROID_NDK}/sources/android/cpufeatures"
-+        "${OBOE_DIR}/include"
-+        )
 +
-+endif (ANDROID)
-+# <-- end Android specifics
-+# <-- end AAP specifics 2
 +
-+target_link_libraries(BYOD PRIVATE juce_plugin_modules juceaap_audio_plugin_client)
- 
- if(IOS)
-     message(STATUS "Setting iOS-specific properties...")
 Submodule modules/chowdsp_utils contains modified content
 diff --git a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp b/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
 index ec8bfb5..688b3f6 100644

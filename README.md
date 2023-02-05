@@ -21,14 +21,6 @@ cd ../../../..
 make
 ```
 
-## Current issues
-
-- MainActivity fails to launch
-  - JuceActivity causes UnsatisfiedLinkError to the JNI symbols that BYOD somehow linked out, unlike other aap-juce apps.
-- <del>Basically applying effect is slow. Definitely not for non-static uses so far. </del>
-  - <del>It is most likely it could not make use of optimal processor instructions i.e. SIMD/NEON.</del>
-- [Loading the list of presets is slow](https://github.com/atsushieno/aap-juce/issues/34). It could take <del>minutes</del>seconds (with RTNeural fix mentioned above).
-
 ## Licenses
 
 BYOD is distributed under the GPLv3 license.

@@ -16,6 +16,11 @@ APP_SHARED_CODE_LIBS="$(APP_NAME)_artefacts/lib$(APP_NAME)_SharedCode.a modules/
 PATCH_FILE=$(shell pwd)/aap-juce-support.patch
 PATCH_DEPTH=1
 
+# JUCE patches if any
+JUCE_PATCHES= \
+	$(PWD)/external/aap-juce/JUCE-support-Android-export-jni-symbols.patch
+JUCE_PATCH_DEPTH=1
+
 PRE_BUILD_TASKS=update-rtneural
 
 include $(AAP_JUCE_DIR)/Makefile.cmake-common

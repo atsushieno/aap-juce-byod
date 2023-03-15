@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index ec1e4bd..f872b66 100644
+index ec1e4bd..e266c74 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -113,6 +113,42 @@ if(BYOD_BUILD_CLAP)
+@@ -113,6 +113,43 @@ if(BYOD_BUILD_CLAP)
      )
  endif()
  
@@ -11,7 +11,7 @@ index ec1e4bd..f872b66 100644
 +# They are needed in desktop too, for generate-aap-metadata.
 +include_directories(
 +        "${AAP_DIR}/include"
-+        "${AAP_JUCE_DIR}/modules"
++        "${AAP_JUCE_DIR}/aap-modules"
 +        )
 +
 +add_definitions([[-DJUCE_PUSH_NOTIFICATIONS_ACTIVITY="com/rmsl/juce/JuceActivity"]])
@@ -22,7 +22,7 @@ index ec1e4bd..f872b66 100644
 +
 +message("AAP_DIR: ${AAP_DIR}")
 +message("AAP_JUCE_DIR: ${AAP_JUCE_DIR}")
-+juce_add_modules(${AAP_JUCE_DIR}/modules/juceaap_audio_plugin_client)
++juce_add_modules(${AAP_JUCE_DIR}/aap-modules/juceaap_audio_plugin_client)
 +
 +if (ANDROID)
 +    find_library(log "log")
@@ -39,6 +39,7 @@ index ec1e4bd..f872b66 100644
 +
 +    target_link_libraries(BYOD PRIVATE juceaap_audio_plugin_client)
 +
++    add_compile_definitions([[JUCE_DONT_AUTO_OPEN_MIDI_DEVICES_ON_MOBILE=1]])
 +endif (ANDROID)
 +# <-- end AAP specifics
 +

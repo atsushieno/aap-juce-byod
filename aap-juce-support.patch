@@ -1,28 +1,38 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index ec1e4bd..e266c74 100644
+index ec1e4bd..c917fdd 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -113,6 +113,43 @@ if(BYOD_BUILD_CLAP)
+@@ -113,6 +113,9 @@ if(BYOD_BUILD_CLAP)
      )
  endif()
  
++# this has to be placed before juce_generate_juce_header()...
++juce_add_modules(${AAP_JUCE_DIR}/aap-modules/aap_audio_processors)
++
+ juce_generate_juce_header(BYOD)
+ add_subdirectory(src)
+ include_directories(src)
+@@ -155,3 +158,43 @@ option(BYOD_BUILD_ADD_ON_MODULES "Build BYOD with add-on modules" OFF)
+ if(BYOD_BUILD_ADD_ON_MODULES)
+     add_subdirectory(modules/BYOD-add-ons)
+ endif()
++
 +# begin AAP specifics -->
 +
 +# They are needed in desktop too, for generate-aap-metadata.
-+include_directories(
++target_include_directories(BYOD PUBLIC
 +        "${AAP_DIR}/include"
 +        "${AAP_JUCE_DIR}/aap-modules"
-+        )
++)
 +
-+add_definitions([[-DJUCE_PUSH_NOTIFICATIONS_ACTIVITY="com/rmsl/juce/JuceActivity"]])
 +target_compile_definitions(BYOD PUBLIC
 +        JUCEAAP_HAVE_AUDIO_PLAYHEAD_NEW_POSITION_INFO=1
 +        JUCE_PUSH_NOTIFICATIONS=1
-+)
++        JUCE_PUSH_NOTIFICATIONS_ACTIVITY="com/rmsl/juce/JuceActivity"
++        )
 +
 +message("AAP_DIR: ${AAP_DIR}")
 +message("AAP_JUCE_DIR: ${AAP_JUCE_DIR}")
-+juce_add_modules(${AAP_JUCE_DIR}/aap-modules/juceaap_audio_plugin_client)
 +
 +if (ANDROID)
 +    find_library(log "log")
@@ -37,15 +47,15 @@ index ec1e4bd..e266c74 100644
 +            #"${OBOE_DIR}/include"
 +            )
 +
-+    target_link_libraries(BYOD PRIVATE juceaap_audio_plugin_client)
-+
-+    add_compile_definitions([[JUCE_DONT_AUTO_OPEN_MIDI_DEVICES_ON_MOBILE=1]])
++    add_compile_definitions(
++            [[JUCE_ANDROID=1]]
++            [[JUCE_DONT_AUTO_OPEN_MIDI_DEVICES_ON_MOBILE=1]]
++    )
 +endif (ANDROID)
-+# <-- end AAP specifics
 +
- juce_generate_juce_header(BYOD)
- add_subdirectory(src)
- include_directories(src)
++target_link_libraries(BYOD PRIVATE aap_audio_processors)
++
++# <-- end AAP specifics
 diff --git a/modules/CMakeLists.txt b/modules/CMakeLists.txt
 index b489c8d..d1d5fdb 100644
 --- a/modules/CMakeLists.txt
@@ -59,55 +69,6 @@ index b489c8d..d1d5fdb 100644
      INTERFACE
          $<TARGET_PROPERTY:juce_plugin_modules,COMPILE_DEFINITIONS>
  )
-Submodule modules/chowdsp_utils contains modified content
-diff --git a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp b/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
-index ec8bfb5..688b3f6 100644
---- a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
-+++ b/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
-@@ -74,7 +74,11 @@ void checkOpenGLStats (juce::OpenGLContext& ctx, int& openGLMajorVersion, int& o
-         false);
- 
-     while (waiting)
--        juce::MessageManager::getInstance()->runDispatchLoopUntil (100);
-+        juce::MessageManager::getInstance()->callAsync([&]() {
-+            timespec ts{}, remainder{};
-+            ts.tv_nsec = 100 * 1000 * 1000;
-+            nanosleep(&ts, &remainder);
-+        });
- }
- } // namespace
- #endif
-diff --git a/modules/chowdsp_utils/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h b/modules/chowdsp_utils/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
-index 106c005..ddedf3b 100644
---- a/modules/chowdsp_utils/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
-+++ b/modules/chowdsp_utils/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
-@@ -18,6 +18,8 @@ namespace SystemInfo
-         return "Mac";
- #elif JUCE_IOS
-         return "IOS";
-+#elif JUCE_ANDROID
-+    return "Android";
- #elif JUCE_LINUX
- #if JUCE_64BIT
-         return "Linux64";
-diff --git a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp b/modules/chowdsp_utils/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp
-index 3b195bf..cfa91dd 100644
---- a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp
-+++ b/modules/chowdsp_utils/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp
-@@ -254,11 +254,11 @@ int PresetsComp::addSavePresetOptions (int optionID)
-                                                   auto presetFile = curPreset->getPresetFile();
-                                                   if (! (presetFile.existsAsFile() && presetFile.hasFileExtension (presetExt)))
-                                                   {
--                                                      juce::NativeMessageBox::showMessageBox (juce::MessageBoxIconType::WarningIcon, "Preset Deletion", "Unable to find preset file!");
-+                                                      //juce::NativeMessageBox::showMessageBox (juce::MessageBoxIconType::WarningIcon, "Preset Deletion", "Unable to find preset file!");
-                                                       return;
-                                                   }
- 
--                                                  if (juce::NativeMessageBox::showOkCancelBox (juce::MessageBoxIconType::QuestionIcon, "Preset Deletion", "Are you sure you want to delete this preset? This operation cannot be undone."))
-+                                                  if (true)//juce::NativeMessageBox::showOkCancelBox (juce::MessageBoxIconType::QuestionIcon, "Preset Deletion", "Are you sure you want to delete this preset? This operation cannot be undone."))
-                                                   {
-                                                       presetFile.deleteFile();
-                                                       manager.loadDefaultPreset();
 diff --git a/src/gui/utils/ErrorMessageView.cpp b/src/gui/utils/ErrorMessageView.cpp
 index 84a2fa2..78de59a 100644
 --- a/src/gui/utils/ErrorMessageView.cpp
@@ -168,3 +129,52 @@ index f4cca50..df5cbfb 100644
      explicit NeuralTriodeModel (const char* modelData, int modelDataSize)
      {
  #if JUCE_DEBUG
+Submodule modules/chowdsp_utils contains modified content
+diff --git a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp b/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
+index ec8bfb5..688b3f6 100644
+--- a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
++++ b/modules/chowdsp_utils/modules/gui/chowdsp_gui/Helpers/chowdsp_OpenGLHelper.cpp
+@@ -74,7 +74,11 @@ void checkOpenGLStats (juce::OpenGLContext& ctx, int& openGLMajorVersion, int& o
+         false);
+ 
+     while (waiting)
+-        juce::MessageManager::getInstance()->runDispatchLoopUntil (100);
++        juce::MessageManager::getInstance()->callAsync([&]() {
++            timespec ts{}, remainder{};
++            ts.tv_nsec = 100 * 1000 * 1000;
++            nanosleep(&ts, &remainder);
++        });
+ }
+ } // namespace
+ #endif
+diff --git a/modules/chowdsp_utils/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h b/modules/chowdsp_utils/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
+index 106c005..ddedf3b 100644
+--- a/modules/chowdsp_utils/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
++++ b/modules/chowdsp_utils/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
+@@ -18,6 +18,8 @@ namespace SystemInfo
+         return "Mac";
+ #elif JUCE_IOS
+         return "IOS";
++#elif JUCE_ANDROID
++    return "Android";
+ #elif JUCE_LINUX
+ #if JUCE_64BIT
+         return "Linux64";
+diff --git a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp b/modules/chowdsp_utils/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp
+index 3b195bf..cfa91dd 100644
+--- a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp
++++ b/modules/chowdsp_utils/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp
+@@ -254,11 +254,11 @@ int PresetsComp::addSavePresetOptions (int optionID)
+                                                   auto presetFile = curPreset->getPresetFile();
+                                                   if (! (presetFile.existsAsFile() && presetFile.hasFileExtension (presetExt)))
+                                                   {
+-                                                      juce::NativeMessageBox::showMessageBox (juce::MessageBoxIconType::WarningIcon, "Preset Deletion", "Unable to find preset file!");
++                                                      //juce::NativeMessageBox::showMessageBox (juce::MessageBoxIconType::WarningIcon, "Preset Deletion", "Unable to find preset file!");
+                                                       return;
+                                                   }
+ 
+-                                                  if (juce::NativeMessageBox::showOkCancelBox (juce::MessageBoxIconType::QuestionIcon, "Preset Deletion", "Are you sure you want to delete this preset? This operation cannot be undone."))
++                                                  if (true)//juce::NativeMessageBox::showOkCancelBox (juce::MessageBoxIconType::QuestionIcon, "Preset Deletion", "Are you sure you want to delete this preset? This operation cannot be undone."))
+                                                   {
+                                                       presetFile.deleteFile();
+                                                       manager.loadDefaultPreset();

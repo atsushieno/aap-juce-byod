@@ -5,7 +5,11 @@
           unique-id="juceaap:44717530" library="libBYOD_Standalone.so"
           entrypoint="GetJuceAAPFactoryStandalone" assets="">
     <extensions>
-      <extension uri="urn://androidaudioplugin.org/extensions/presets/v1"/>
+      <extension uri="urn://androidaudioplugin.org/extensions/plugin-info/v2"/>
+      <extension uri="urn://androidaudioplugin.org/extensions/presets/v2"/>
+      <extension uri="urn://androidaudioplugin.org/extensions/state/v2"/>
+      <extension uri="urn://androidaudioplugin.org/extensions/midi2/v2"/>
+      <extension uri="urn://androidaudioplugin.org/extensions/gui/v2"/>
     </extensions>
     <parameters xmlns="urn://androidaudioplugin.org/extensions/parameters">
       <parameter id="0" name="Oversampling Factor" direction="input" minimum="0.0"

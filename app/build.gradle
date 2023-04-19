@@ -42,7 +42,8 @@ android {
     dependencies {
         implementation libs.androidx.core.ktx
         implementation libs.startup.runtime
-        implementation project(':androidaudioplugin')//libs.aap.core
+        implementation libs.aap.core
+        implementation libs.aap.ui.web
     }
 
     buildFeatures {

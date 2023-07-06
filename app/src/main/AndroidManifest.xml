@@ -29,7 +29,7 @@
           android:name="org.androidaudioplugin.AudioPluginService.V3#Plugins"
           android:resource="@xml/aap_metadata"/>
     </service>
-
+    <service android:name="org.androidaudioplugin.AudioPluginViewService" android:exported="true" />
     <provider android:name="androidx.startup.InitializationProvider"
         android:authorities="${applicationId}.androidx-startup"
         android:exported="false"

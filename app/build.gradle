@@ -5,12 +5,11 @@ plugins {
 
 android {
     namespace "org.androidaudioplugin.ports.juce.byod"
-    compileSdkVersion 33
+    compileSdk = 33
 
     defaultConfig {
         applicationId "org.androidaudioplugin.ports.juce.byod"
-        minSdkVersion    29
-        targetSdkVersion 33
+        minSdk = 29
         ndk {
             abiFilters "x86", "x86_64", "arm64-v8a"
         }
@@ -27,7 +26,7 @@ android {
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"
-            version "3.22.1"
+            version libs.versions.cmake.get()
         }
     }
 
@@ -44,6 +43,7 @@ android {
         implementation libs.startup.runtime
         implementation libs.aap.core
         implementation libs.aap.ui.web
+        implementation libs.aap.ui.compose
     }
 
     buildFeatures {
@@ -51,5 +51,8 @@ android {
     }
 
     ndkVersion libs.versions.ndk.get()
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
 }
 

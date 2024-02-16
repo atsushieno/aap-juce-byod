@@ -18,21 +18,8 @@ PATCH_DEPTH=1
 
 # JUCE patches if any
 JUCE_PATCHES= \
-	$(PWD)/external/aap-juce/JUCE-support-Android-export-jni-symbols.patch
+	$(PWD)/external/aap-juce/juce-patches/7.0.6/export-jni-symbols.patch
 JUCE_PATCH_DEPTH=1
 
-PRE_BUILD_TASKS=update-rtneural
-
 include $(AAP_JUCE_DIR)/Makefile.cmake-common
-
-update-rtneural: external/BYOD/modules/RTNeural/.stamp-rtneural
-
-external/BYOD/modules/RTNeural/.stamp-rtneural:
-	cd external/BYOD/modules/RTNeural ; \
-	git remote add atsushieno https://github.com/atsushieno/RTNeural.git ; \
-	git fetch atsushieno bump-xsimd-for-android ; \
-	git switch bump-xsimd-for-android ; \
-	git submodule update --init --recursive ; \
-	touch .stamp-rtneural ; \
-	cd ../../../..
 

@@ -4,6 +4,7 @@ local.properties
 build
 .gradle
 dist
+app/src/main/res/drawable/ic_launcher.png
 
 .stamp-juce
 .stamp-eq

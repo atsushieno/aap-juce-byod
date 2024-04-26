@@ -8,6 +8,8 @@ APP_BUILD_DIR=$(PWD)
 APP_SRC_DIR=$(PWD)/external/BYOD
 JUCE_DIR=$(APP_SRC_DIR)/modules/JUCE
 
+APP_ICON=$(APP_SRC_DIR)/res/logo.png
+
 METADATA_GENERATOR_CMAKE_EXTRA_FLAGS=-DJUCEAAP_HAVE_AUDIO_PLAYHEAD_NEW_POSITION_INFO=1
 
 # For metadata updates, relative to build-desktop

@@ -5,10 +5,11 @@ plugins {
 
 android {
     namespace "org.androidaudioplugin.ports.juce.byod"
-    compileSdk = 34
+    compileSdkPreview = "VanillaIceCream"
 
     defaultConfig {
         applicationId "org.androidaudioplugin.ports.juce.byod"
+        targetSdk = libs.versions.android.targetSdk.get().toInteger()
         minSdk = 29
         ndk {
             abiFilters "x86", "x86_64", "arm64-v8a"

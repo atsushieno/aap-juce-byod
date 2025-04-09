@@ -1,16 +1,18 @@
+pluginManagement {
+    repositories {
+        google()
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+dependencyResolutionManagement {
+    repositories {
+        mavenLocal()
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") } // required for compose-markdown...
+    }
+}
+
 rootProject.name = 'BYOD'
 include ':app'
-
-// When debugging, enable these lines (and change `implementation` section in build.gradle.
-/*
-include ':androidaudioplugin'
-include ':androidaudioplugin-ui-web'
-include ':androidaudioplugin-manager'
-include ':androidaudioplugin-ui-compose'
-include ':androidaudioplugin-ui-compose-app'
-project(':androidaudioplugin').projectDir = new File('external/aap-core/androidaudioplugin')
-project(':androidaudioplugin-manager').projectDir = new File('external/aap-core/androidaudioplugin-manager')
-project(':androidaudioplugin-ui-compose').projectDir = new File('external/aap-core/androidaudioplugin-ui-compose')
-project(':androidaudioplugin-ui-compose-app').projectDir = new File('external/aap-core/androidaudioplugin-ui-compose-app')
-project(':androidaudioplugin-ui-web').projectDir = new File('external/aap-core/androidaudioplugin-ui-web')
- */

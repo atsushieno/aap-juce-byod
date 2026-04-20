@@ -21,7 +21,9 @@ PATCH_DEPTH=1
 # JUCE patches if any
 JUCE_PATCHES= \
 	$(AAP_JUCE_DIR)/juce-patches/7.0.6/export-jni-symbols.patch \
-	$(AAP_JUCE_DIR)/juce-patches/7.0.11/disable-cgwindowlistcreateimage.patch 
+	$(AAP_JUCE_DIR)/juce-patches/7.0.6/support-plugin-ui.patch \
+	$(AAP_JUCE_DIR)/juce-patches/7.0.11/disable-cgwindowlistcreateimage.patch \
+	$(AAP_JUCE_DIR)/juce-patches/7.0.11/juce-component-peer-view-touch.patch
 
 JUCE_PATCH_DEPTH=1
 

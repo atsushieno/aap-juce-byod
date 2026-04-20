@@ -110,6 +110,20 @@ index 106c005..ddedf3b 100644
  #elif JUCE_LINUX
  #if JUCE_64BIT
          return "Linux64";
+diff --git a/modules/chowdsp_utils/modules/gui/chowdsp_gui/LookAndFeel/chowdsp_ChowLNF.cpp b/modules/chowdsp_utils/modules/gui/chowdsp_gui/LookAndFeel/chowdsp_ChowLNF.cpp
+index bb86cf7..704c831 100644
+--- a/modules/chowdsp_utils/modules/gui/chowdsp_gui/LookAndFeel/chowdsp_ChowLNF.cpp
++++ b/modules/chowdsp_utils/modules/gui/chowdsp_gui/LookAndFeel/chowdsp_ChowLNF.cpp
+@@ -265,6 +265,9 @@ juce::Component* ChowLNF::getParentComponentForMenuOptions (const juce::PopupMen
+         if (options.getParentComponent() == nullptr && options.getTargetComponent() != nullptr)
+             return options.getTargetComponent()->getTopLevelComponent();
+     }
++#elif JUCE_ANDROID
++    if (options.getParentComponent() == nullptr && options.getTargetComponent() != nullptr)
++        return options.getTargetComponent()->getTopLevelComponent();
+ #endif
+     return juce::LookAndFeel_V2::getParentComponentForMenuOptions (options);
+ }
 diff --git a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp b/modules/chowdsp_utils/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp
 index 707e023..ac0c516 100644
 --- a/modules/chowdsp_utils/modules/gui/chowdsp_gui/Presets/chowdsp_PresetsComp.cpp

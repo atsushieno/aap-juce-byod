@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 81d40ef..c7d1b13 100644
+index 4ce5c94..2935f50 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -125,6 +125,9 @@ if(BYOD_BUILD_CLAP)
@@ -12,7 +12,7 @@ index 81d40ef..c7d1b13 100644
  juce_generate_juce_header(BYOD)
  add_subdirectory(src)
  include_directories(src)
-@@ -146,3 +149,43 @@ option(BYOD_BUILD_ADD_ON_MODULES "Build BYOD with add-on modules" OFF)
+@@ -146,3 +149,49 @@ option(BYOD_BUILD_ADD_ON_MODULES "Build BYOD with add-on modules" OFF)
  if(BYOD_BUILD_ADD_ON_MODULES)
      add_subdirectory(modules/BYOD-add-ons)
  endif()
@@ -39,6 +39,7 @@ index 81d40ef..c7d1b13 100644
 +    find_library(android "android")
 +    find_library(glesv2 "GLESv2")
 +    find_library(egl "EGL")
++    find_package(androidaudioplugin CONFIG REQUIRED)
 +    #set(cpufeatures_lib "cpufeatures")
 +    #set(oboe_lib "oboe")
 +
@@ -46,6 +47,11 @@ index 81d40ef..c7d1b13 100644
 +            "${ANDROID_NDK}/sources/android/cpufeatures"
 +            #"${OBOE_DIR}/include"
 +            )
++
++    target_link_libraries(BYOD PRIVATE
++            androidaudioplugin::androidaudioplugin
++            aap_audio_processors
++    )
 +
 +    add_compile_definitions(
 +            [[JUCE_ANDROID=1]]
@@ -57,19 +63,40 @@ index 81d40ef..c7d1b13 100644
 +
 +# <-- end AAP specifics
 diff --git a/modules/CMakeLists.txt b/modules/CMakeLists.txt
-index 88bf159..e929083 100644
+index f3b5a52..6fcb716 100644
 --- a/modules/CMakeLists.txt
 +++ b/modules/CMakeLists.txt
-@@ -72,6 +72,8 @@ target_compile_definitions(juce_plugin_modules
-         JucePlugin_VersionString="${CMAKE_PROJECT_VERSION}"
-         JucePlugin_Name="${CMAKE_PROJECT_NAME}"
-         JUCE_MODAL_LOOPS_PERMITTED=1
+@@ -64,12 +64,15 @@ endif()
+ 
+ target_compile_definitions(juce_plugin_modules
+     PUBLIC
++        JUCE_MODULE_AVAILABLE_juce_graphics=! # Why do we even need this explicitly defined??
+         JUCE_DISPLAY_SPLASH_SCREEN=0
+         JUCE_REPORT_APP_USAGE=0
+         JUCE_WEB_BROWSER=0
+         JUCE_USE_CURL=0
+         JUCE_JACK=1
+         JUCE_ALSA=1
 +        JUCE_PUSH_NOTIFICATIONS=1
 +        JUCE_PUSH_NOTIFICATIONS_ACTIVITY="com/rmsl/juce/JuceActivity"
-     INTERFACE
-         $<TARGET_PROPERTY:juce_plugin_modules,COMPILE_DEFINITIONS>
- )
+         JucePlugin_Manufacturer="chowdsp"
+         JucePlugin_VersionString="${CMAKE_PROJECT_VERSION}"
+         JucePlugin_Name="${CMAKE_PROJECT_NAME}"
 Submodule modules/chowdsp_utils contains modified content
+diff --git a/modules/chowdsp_utils/modules/common/chowdsp_logging/third_party/spdlog/include/spdlog/details/fmt_helper.h b/modules/chowdsp_utils/modules/common/chowdsp_logging/third_party/spdlog/include/spdlog/details/fmt_helper.h
+index 07ab9ba..26b658c 100644
+--- a/modules/chowdsp_utils/modules/common/chowdsp_logging/third_party/spdlog/include/spdlog/details/fmt_helper.h
++++ b/modules/chowdsp_utils/modules/common/chowdsp_logging/third_party/spdlog/include/spdlog/details/fmt_helper.h
+@@ -88,7 +88,8 @@ inline void pad2(int n, memory_buf_t &dest) {
+         dest.push_back(static_cast<char>('0' + n % 10));
+     } else  // unlikely, but just in case, let fmt deal with it
+     {
+-        fmt_lib::format_to(std::back_inserter(dest), SPDLOG_FMT_STRING("{:02}"), n);
++        // fails to compile on Android...?
++        //fmt_lib::format_to(std::back_inserter(dest), SPDLOG_FMT_STRING("{:02}"), n);
+     }
+ }
+ 
 diff --git a/modules/chowdsp_utils/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h b/modules/chowdsp_utils/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
 index 106c005..ddedf3b 100644
 --- a/modules/chowdsp_utils/modules/gui/chowdsp_gui/InfoUtils/chowdsp_SystemInfo.h
@@ -102,11 +129,11 @@ index 707e023..ac0c516 100644
                                                        presetFile.deleteFile();
                                                        manager.loadDefaultPreset();
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index f44c119..c9ed1d4 100644
+index 8b13ee7..6a776a8 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -206,5 +206,5 @@ file(GLOB_RECURSE juce_module_sources
- set_source_files_properties(${juce_module_sources}
+@@ -223,5 +223,5 @@ file(GLOB_RECURSE module_sources
+ set_source_files_properties(${module_sources}
      TARGET_DIRECTORY BYOD
      PROPERTIES SKIP_PRECOMPILE_HEADERS TRUE SKIP_UNITY_BUILD_INCLUSION TRUE)
 -set_target_properties(BYOD PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
@@ -158,10 +185,10 @@ index e580113..11820a6 100644
      tests/WaveshaperTest.cpp
  )
 diff --git a/src/processors/chain/ProcessorChainActions.cpp b/src/processors/chain/ProcessorChainActions.cpp
-index f864796..a35aaa9 100644
+index d59df97..518e0cc 100644
 --- a/src/processors/chain/ProcessorChainActions.cpp
 +++ b/src/processors/chain/ProcessorChainActions.cpp
-@@ -127,7 +127,9 @@ bool waitForPointerCheck (const PointerType& pointer, int waitCycles = 6)
+@@ -147,7 +147,9 @@ bool waitForPointerCheck (const PointerType& pointer, int waitCycles = 6)
          if (count >= waitCycles)
              return false;
  

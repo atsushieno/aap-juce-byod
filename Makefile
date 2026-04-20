@@ -20,7 +20,9 @@ PATCH_DEPTH=1
 
 # JUCE patches if any
 JUCE_PATCHES= \
-	$(PWD)/external/aap-juce/juce-patches/7.0.6/export-jni-symbols.patch
+	$(AAP_JUCE_DIR)/juce-patches/7.0.6/export-jni-symbols.patch \
+	$(AAP_JUCE_DIR)/juce-patches/7.0.11/disable-cgwindowlistcreateimage.patch 
+
 JUCE_PATCH_DEPTH=1
 
 include $(AAP_JUCE_DIR)/Makefile.cmake-common

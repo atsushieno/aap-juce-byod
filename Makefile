@@ -24,7 +24,7 @@ JUCE_PATCHES= \
 	$(AAP_JUCE_DIR)/juce-patches/7.0.6/support-plugin-ui.patch \
 	$(AAP_JUCE_DIR)/juce-patches/7.0.11/disable-cgwindowlistcreateimage.patch \
 	$(AAP_JUCE_DIR)/juce-patches/7.0.11/juce-component-peer-view-touch.patch \
-	$(AAP_JUCE_DIR)/juce-patches/7.0.12/popup-menu-android.patch
+	$(AAP_JUCE_DIR)/juce-patches/7.0.11/popup-menu-android.patch
 
 JUCE_PATCH_DEPTH=1
 

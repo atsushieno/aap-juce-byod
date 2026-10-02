@@ -173,12 +173,13 @@ diff --git a/src/headless/CMakeLists.txt b/src/headless/CMakeLists.txt
 index e580113..11820a6 100644
 --- a/src/headless/CMakeLists.txt
 +++ b/src/headless/CMakeLists.txt
-@@ -16,19 +16,19 @@ target_sources(BYOD_headless PRIVATE
+@@ -16,19 +16,20 @@ target_sources(BYOD_headless PRIVATE
      ScreenshotGenerator.cpp
      GuitarMLFilterDesigner.cpp
  
 -    tests/AmpIRsSaveLoadTest.cpp
 +    #tests/AmpIRsSaveLoadTest.cpp
++    tests/DSPMemoryReleaseTest.cpp
      tests/BadModulationTest.cpp
 -    tests/ForwardingParamStabilityTest.cpp
 +    #tests/ForwardingParamStabilityTest.cpp
@@ -225,3 +226,568 @@ index f4cca50..df5cbfb 100644
      explicit NeuralTriodeModel (const char* modelData, int modelDataSize)
      {
  #if JUCE_DEBUG
+
+diff --git a/src/processors/drive/BassFace.cpp b/src/processors/drive/BassFace.cpp
+index 1f2eb5e..0a19486 100644
+--- a/src/processors/drive/BassFace.cpp
++++ b/src/processors/drive/BassFace.cpp
+@@ -23,14 +23,17 @@ ParamLayout BassFace::createParameterLayout()
+ 
+ void BassFace::prepare (double sampleRate, int samplesPerBlock)
+ {
++    if (model == nullptr)
++        model = std::make_unique<std::array<ResampledRNNAccelerated<2, hiddenSize>, 2>>();
++
+     if ((int) sampleRate % 44100 == 0)
+     {
+-        for (auto& m : model)
++        for (auto& m : *model)
+             m.initialise (BinaryData::bass_face_model_88_2k_json, BinaryData::bass_face_model_88_2k_jsonSize, 88200.0);
+     }
+     else
+     {
+-        for (auto& m : model)
++        for (auto& m : *model)
+             m.initialise (BinaryData::bass_face_model_96k_json, BinaryData::bass_face_model_96k_jsonSize, 96000.0);
+     }
+ 
+@@ -40,7 +43,7 @@ void BassFace::prepare (double sampleRate, int samplesPerBlock)
+     const auto osSampleRate = sampleRate * (double) oversampling->getOversamplingFactor();
+     const auto osSamplesPerBlock = samplesPerBlock * (int) oversampling->getOversamplingFactor();
+ 
+-    for (auto& m : model)
++    for (auto& m : *model)
+         m.prepare (osSampleRate, osSamplesPerBlock);
+ 
+     gainSmoothed.prepare (osSampleRate, osSamplesPerBlock);
+@@ -58,6 +61,12 @@ void BassFace::prepare (double sampleRate, int samplesPerBlock)
+     }
+ }
+ 
++void BassFace::releaseMemory()
++{
++    model.reset();
++    oversampling.reset();
++}
++
+ void BassFace::processAudio (AudioBuffer<float>& buffer)
+ {
+     const auto numChannels = buffer.getNumChannels();
+@@ -73,7 +82,7 @@ void BassFace::processAudio (AudioBuffer<float>& buffer)
+         for (int ch = 0; ch < numChannels; ++ch)
+         {
+             auto&& channelBlock = osBlock.getSingleChannelBlock ((size_t) ch);
+-            model[ch].process (channelBlock, { gainData, (size_t) osNumSamples });
++            (*model)[ch].process (channelBlock, { gainData, (size_t) osNumSamples });
+         }
+ 
+         oversampling->processSamplesDown (block);
+diff --git a/src/processors/drive/BassFace.h b/src/processors/drive/BassFace.h
+index 82ba9b4..3b912c2 100644
+--- a/src/processors/drive/BassFace.h
++++ b/src/processors/drive/BassFace.h
+@@ -13,13 +13,14 @@ public:
+     static ParamLayout createParameterLayout();
+ 
+     void prepare (double sampleRate, int samplesPerBlock) override;
++    void releaseMemory() override;
+     void processAudio (AudioBuffer<float>& buffer) override;
+ 
+ private:
+     chowdsp::SmoothedBufferValue<float> gainSmoothed;
+ 
+     static constexpr int hiddenSize = 24;
+-    ResampledRNNAccelerated<2, hiddenSize> model[2];
++    std::unique_ptr<std::array<ResampledRNNAccelerated<2, hiddenSize>, 2>> model;
+ 
+     std::optional<dsp::Oversampling<float>> oversampling;
+ 
+diff --git a/src/processors/drive/MetalFace.cpp b/src/processors/drive/MetalFace.cpp
+index 8407fa7..c64219c 100644
+--- a/src/processors/drive/MetalFace.cpp
++++ b/src/processors/drive/MetalFace.cpp
+@@ -10,8 +10,6 @@ MetalFace::MetalFace (UndoManager* um) : BaseProcessor ("Metal Face", createPara
+     uiOptions.info.description = "Emulation of a HEAVY distortion signal chain.";
+     uiOptions.info.authors = StringArray { "Jatin Chowdhury" };
+ 
+-    for (auto& model : rnn)
+-        model.initialise (BinaryData::metal_face_model_json, BinaryData::metal_face_model_jsonSize, 96000.0);
+ }
+ 
+ ParamLayout MetalFace::createParameterLayout()
+@@ -26,10 +24,17 @@ ParamLayout MetalFace::createParameterLayout()
+ 
+ void MetalFace::prepare (double sampleRate, int samplesPerBlock)
+ {
++    if (rnn == nullptr)
++    {
++        rnn = std::make_unique<std::array<ResampledRNNAccelerated<1, 28>, 2>>();
++        for (auto& model : *rnn)
++            model.initialise (BinaryData::metal_face_model_json, BinaryData::metal_face_model_jsonSize, 96000.0);
++    }
++
+     gain.prepare ({ sampleRate, (uint32) samplesPerBlock, 2 });
+     gain.setRampDurationSeconds (0.1);
+ 
+-    for (auto& model : rnn)
++    for (auto& model : *rnn)
+         model.prepare (sampleRate, samplesPerBlock);
+ 
+     dcBlocker.prepare (sampleRate, samplesPerBlock);
+@@ -43,6 +48,11 @@ void MetalFace::prepare (double sampleRate, int samplesPerBlock)
+     }
+ }
+ 
++void MetalFace::releaseMemory()
++{
++    rnn.reset();
++}
++
+ void MetalFace::processAudio (AudioBuffer<float>& buffer)
+ {
+     auto&& block = dsp::AudioBlock<float> { buffer };
+@@ -54,7 +64,7 @@ void MetalFace::processAudio (AudioBuffer<float>& buffer)
+     for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+     {
+         auto&& channelBlock = block.getSingleChannelBlock ((size_t) ch);
+-        rnn[ch].process (channelBlock);
++        (*rnn)[ch].process (channelBlock);
+     }
+ 
+     const auto makeupDB = (-48.0f - gainDB) / 10.0f;
+diff --git a/src/processors/drive/MetalFace.h b/src/processors/drive/MetalFace.h
+index 3ca2904..e2654e9 100644
+--- a/src/processors/drive/MetalFace.h
++++ b/src/processors/drive/MetalFace.h
+@@ -14,13 +14,14 @@ public:
+     static ParamLayout createParameterLayout();
+ 
+     void prepare (double sampleRate, int samplesPerBlock) override;
++    void releaseMemory() override;
+     void processAudio (AudioBuffer<float>& buffer) override;
+ 
+ private:
+     chowdsp::FloatParameter* gainDBParam = nullptr;
+ 
+     dsp::Gain<float> gain;
+-    ResampledRNNAccelerated<1, 28> rnn[2];
++    std::unique_ptr<std::array<ResampledRNNAccelerated<1, 28>, 2>> rnn;
+ 
+     DCBlocker dcBlocker;
+ 
+diff --git a/src/processors/modulation/Chorus.cpp b/src/processors/modulation/Chorus.cpp
+index 4be6f96..5ebf668 100644
+--- a/src/processors/modulation/Chorus.cpp
++++ b/src/processors/modulation/Chorus.cpp
+@@ -57,6 +57,16 @@ ParamLayout Chorus::createParameterLayout()
+     return { params.begin(), params.end() };
+ }
+ 
++void Chorus::releaseMemory()
++{
++    for (auto& channel : cleanDelay)
++        for (auto& delay : channel)
++            delay.delay.free();
++    for (auto& channel : lofiDelay)
++        for (auto& delay : channel)
++            delay.free();
++}
++
+ void Chorus::prepare (double sampleRate, int samplesPerBlock)
+ {
+     dsp::ProcessSpec spec { sampleRate, (uint32) samplesPerBlock, 2 };
+diff --git a/src/processors/modulation/Chorus.h b/src/processors/modulation/Chorus.h
+index 502178f..5d474b6 100644
+--- a/src/processors/modulation/Chorus.h
++++ b/src/processors/modulation/Chorus.h
+@@ -12,6 +12,7 @@ public:
+     static ParamLayout createParameterLayout();
+ 
+     void prepare (double sampleRate, int samplesPerBlock) override;
++    void releaseMemory() override;
+     void processAudio (AudioBuffer<float>& buffer) override;
+     void processAudioBypassed (AudioBuffer<float>& buffer) override;
+ 
+diff --git a/src/processors/modulation/Flanger.cpp b/src/processors/modulation/Flanger.cpp
+index 543cf48..d3afe00 100644
+--- a/src/processors/modulation/Flanger.cpp
++++ b/src/processors/modulation/Flanger.cpp
+@@ -65,6 +65,16 @@ ParamLayout Flanger::createParameterLayout()
+     return { params.begin(), params.end() };
+ }
+ 
++void Flanger::releaseMemory()
++{
++    for (auto& channel : cleanDelay)
++        for (auto& delay : channel)
++            delay.delay.free();
++    for (auto& channel : lofiDelay)
++        for (auto& delay : channel)
++            delay.free();
++}
++
+ void Flanger::prepare (double sampleRate, int samplesPerBlock)
+ {
+     dsp::ProcessSpec spec { sampleRate, (uint32) samplesPerBlock, 2 };
+diff --git a/src/processors/modulation/Flanger.h b/src/processors/modulation/Flanger.h
+index 260a14c..e462abe 100644
+--- a/src/processors/modulation/Flanger.h
++++ b/src/processors/modulation/Flanger.h
+@@ -12,6 +12,7 @@ public:
+     static ParamLayout createParameterLayout();
+ 
+     void prepare (double sampleRate, int samplesPerBlock) override;
++    void releaseMemory() override;
+     void processAudio (AudioBuffer<float>& buffer) override;
+     void processAudioBypassed (AudioBuffer<float>& buffer) override;
+ 
+diff --git a/src/processors/modulation/Rotary.cpp b/src/processors/modulation/Rotary.cpp
+index b8dc088..988adb1 100644
+--- a/src/processors/modulation/Rotary.cpp
++++ b/src/processors/modulation/Rotary.cpp
+@@ -56,6 +56,13 @@ ParamLayout Rotary::createParameterLayout()
+     return { params.begin(), params.end() };
+ }
+ 
++void Rotary::releaseMemory()
++{
++    for (auto& channel : chorusDelay)
++        for (auto& delay : channel)
++            delay.delay.free();
++}
++
+ void Rotary::prepare (double sampleRate, int samplesPerBlock)
+ {
+     const auto&& monoSpec = dsp::ProcessSpec { sampleRate, (uint32) samplesPerBlock, 1 };
+diff --git a/src/processors/modulation/Rotary.h b/src/processors/modulation/Rotary.h
+index 8a5cf74..72cfdef 100644
+--- a/src/processors/modulation/Rotary.h
++++ b/src/processors/modulation/Rotary.h
+@@ -11,6 +11,7 @@ public:
+     static ParamLayout createParameterLayout();
+ 
+     void prepare (double sampleRate, int samplesPerBlock) override;
++    void releaseMemory() override;
+     void processAudio (AudioBuffer<float>& buffer) override;
+     void processAudioBypassed (AudioBuffer<float>& buffer) override;
+ 
+diff --git a/src/processors/tone/LofiIrs.cpp b/src/processors/tone/LofiIrs.cpp
+index 2727a40..71ea2d3 100644
+--- a/src/processors/tone/LofiIrs.cpp
++++ b/src/processors/tone/LofiIrs.cpp
+@@ -22,7 +22,7 @@ const String gainTag = "gain";
+ } // namespace LofiIRTags
+ 
+ LofiIrs::LofiIrs (UndoManager* um) : BaseProcessor ("LoFi IRs", createParameterLayout(), um),
+-                                     convolution (getSharedConvolutionMessageQueue())
++                                     convolution (std::in_place, getSharedConvolutionMessageQueue())
+ {
+     for (const auto& irName : LofiIRTags::irNames)
+     {
+@@ -72,14 +72,19 @@ void LofiIrs::parameterChanged (const String& parameterID, float newValue)
+ 
+     auto irIdx = (int) newValue;
+     auto& irData = irMap[LofiIRTags::irNames[irIdx]];
+-    convolution.loadImpulseResponse (irData.first, irData.second, dsp::Convolution::Stereo::yes, dsp::Convolution::Trim::yes, 0);
++    const ScopedLock lock (irMutex);
++    if (convolution.has_value())
++        convolution->loadImpulseResponse (irData.first, irData.second, dsp::Convolution::Stereo::yes, dsp::Convolution::Trim::yes, 0);
+ }
+ 
+ void LofiIrs::prepare (double sampleRate, int samplesPerBlock)
+ {
+     dsp::ProcessSpec spec { sampleRate, (uint32) samplesPerBlock, 2 };
+-    convolution.prepare (spec);
++    const ScopedLock lock (irMutex);
++    if (! convolution.has_value())
++        convolution.emplace (getSharedConvolutionMessageQueue());
+     parameterChanged (LofiIRTags::irTag, vts.getRawParameterValue (LofiIRTags::irTag)->load());
++    convolution->prepare (spec);
+ 
+     gain.prepare (spec);
+     gain.setRampDurationSeconds (0.01);
+@@ -90,6 +95,13 @@ void LofiIrs::prepare (double sampleRate, int samplesPerBlock)
+     makeupGainDB = Decibels::gainToDecibels (std::sqrt (96000.0f / (float) sampleRate));
+ }
+ 
++void LofiIrs::releaseMemory()
++{
++    const ScopedLock lock (irMutex);
++    // Undo history keeps the processor and IR state, but does not need the DSP engine.
++    convolution.reset();
++}
++
+ void LofiIrs::processAudio (AudioBuffer<float>& buffer)
+ {
+     const auto numChannels = buffer.getNumChannels();
+@@ -102,7 +114,7 @@ void LofiIrs::processAudio (AudioBuffer<float>& buffer)
+     gain.setGainDecibels (gainParam->getCurrentValue() + makeupGainDB);
+ 
+     dryWet.pushDrySamples (block);
+-    convolution.process (context);
++    convolution->process (context);
+     gain.process (context);
+     dryWet.mixWetSamples (block);
+ }
+diff --git a/src/processors/tone/LofiIrs.h b/src/processors/tone/LofiIrs.h
+index f6e4136..c8583ad 100644
+--- a/src/processors/tone/LofiIrs.h
++++ b/src/processors/tone/LofiIrs.h
+@@ -14,6 +14,7 @@ public:
+     void parameterChanged (const String& parameterID, float newValue) override;
+ 
+     void prepare (double sampleRate, int samplesPerBlock) override;
++    void releaseMemory() override;
+     void processAudio (AudioBuffer<float>& buffer) override;
+ 
+ private:
+@@ -23,7 +24,8 @@ private:
+     using IRType = std::pair<void*, size_t>;
+     std::unordered_map<String, IRType> irMap;
+ 
+-    dsp::Convolution convolution;
++    CriticalSection irMutex;
++    std::optional<dsp::Convolution> convolution;
+     dsp::Gain<float> gain;
+ 
+     float makeupGainDB = 0.0f;
+diff --git a/src/processors/tone/amp_irs/AmpIRs.cpp b/src/processors/tone/amp_irs/AmpIRs.cpp
+index 3d93f9a..b19c726 100644
+--- a/src/processors/tone/amp_irs/AmpIRs.cpp
++++ b/src/processors/tone/amp_irs/AmpIRs.cpp
+@@ -2,7 +2,7 @@
+ #include "processors/ParameterHelpers.h"
+ 
+ AmpIRs::AmpIRs (UndoManager* um) : BaseProcessor ("Amp IRs", createParameterLayout(), um),
+-                                   convolution (getSharedConvolutionMessageQueue())
++                                   convolution (std::in_place, getSharedConvolutionMessageQueue())
+ {
+     audioFormatManager.registerBasicFormats();
+ 
+@@ -74,7 +74,8 @@ void AmpIRs::parameterChanged (const String& parameterID, float newValue)
+     setMakeupGain (96000.0f);
+ 
+     ScopedLock sl (irMutex);
+-    convolution.loadImpulseResponse (irData.first, irData.second, dsp::Convolution::Stereo::yes, dsp::Convolution::Trim::yes, 0);
++    if (convolution.has_value())
++        convolution->loadImpulseResponse (irData.first, irData.second, dsp::Convolution::Stereo::yes, dsp::Convolution::Trim::yes, 0);
+ }
+ 
+ void AmpIRs::prepare (double sampleRate, int samplesPerBlock)
+@@ -82,18 +83,28 @@ void AmpIRs::prepare (double sampleRate, int samplesPerBlock)
+     fs = (float) sampleRate;
+ 
+     dsp::ProcessSpec spec { sampleRate, (uint32) samplesPerBlock, 2 };
+-    convolution.prepare (spec);
++    const ScopedLock lock (irMutex);
++    if (! convolution.has_value())
++        convolution.emplace (getSharedConvolutionMessageQueue());
++
++    if (irState.paramIndex == customIRIndex)
++        loadIRFromCurrentState();
++    else
++        parameterChanged (irTag, vts.getRawParameterValue (irTag)->load());
++    convolution->prepare (spec);
+ 
+     gain.prepare (spec);
+     gain.setRampDurationSeconds (0.01);
+ 
+     dryWetMixer.prepare (spec);
+     dryWetMixerMono.prepare ({ sampleRate, (uint32) samplesPerBlock, 1 });
++}
+ 
+-    if (irState.paramIndex == customIRIndex)
+-        loadIRFromCurrentState();
+-    else
+-        parameterChanged (irTag, vts.getRawParameterValue (irTag)->load());
++void AmpIRs::releaseMemory()
++{
++    const ScopedLock lock (irMutex);
++    // Undo history keeps the processor and IR state, but does not need the DSP engine.
++    convolution.reset();
+ }
+ 
+ void AmpIRs::processAudio (AudioBuffer<float>& buffer)
+@@ -108,7 +119,7 @@ void AmpIRs::processAudio (AudioBuffer<float>& buffer)
+     gain.setGainDecibels (gainParam->getCurrentValue() + makeupGainDB.load());
+ 
+     dryWet.pushDrySamples (block);
+-    convolution.process (context);
++    convolution->process (context);
+     gain.process (context);
+     dryWet.mixWetSamples (block);
+ }
+diff --git a/src/processors/tone/amp_irs/AmpIRs.h b/src/processors/tone/amp_irs/AmpIRs.h
+index c14a20e..1d4c3c0 100644
+--- a/src/processors/tone/amp_irs/AmpIRs.h
++++ b/src/processors/tone/amp_irs/AmpIRs.h
+@@ -15,6 +15,7 @@ public:
+     void loadIRFromStream (std::unique_ptr<InputStream>&& stream, const String& name = {}, const juce::File& file = {}, Component* associatedComp = nullptr);
+ 
+     void prepare (double sampleRate, int samplesPerBlock) override;
++    void releaseMemory() override;
+     void processAudio (AudioBuffer<float>& buffer) override;
+ 
+     bool getCustomComponents (OwnedArray<Component>& customComps, chowdsp::HostContextProvider& hcp) override;
+@@ -29,7 +30,7 @@ private:
+     chowdsp::FloatParameter* mixParam = nullptr;
+     chowdsp::FloatParameter* gainParam = nullptr;
+ 
+-    dsp::Convolution convolution { juce::dsp::Convolution::NonUniform { 256 } };
++    std::optional<dsp::Convolution> convolution;
+     dsp::Gain<float> gain;
+     std::atomic<float> makeupGainDB { 0.0f };
+ 
+diff --git a/src/processors/tone/amp_irs/AmpIRsSaveLoad.cpp b/src/processors/tone/amp_irs/AmpIRsSaveLoad.cpp
+index f43dfd4..d7f40b5 100644
+--- a/src/processors/tone/amp_irs/AmpIRsSaveLoad.cpp
++++ b/src/processors/tone/amp_irs/AmpIRsSaveLoad.cpp
+@@ -58,7 +58,8 @@ void AmpIRs::loadIRFromStream (std::unique_ptr<InputStream>&& stream, const Stri
+     setMakeupGain ((float) formatReader->sampleRate);
+ 
+     ScopedLock sl (irMutex);
+-    convolution.loadImpulseResponse (std::move (resultBuffer), formatReader->sampleRate, dsp::Convolution::Stereo::yes, dsp::Convolution::Trim::yes, dsp::Convolution::Normalise::yes);
++    if (convolution.has_value())
++        convolution->loadImpulseResponse (std::move (resultBuffer), formatReader->sampleRate, dsp::Convolution::Stereo::yes, dsp::Convolution::Trim::yes, dsp::Convolution::Normalise::yes);
+ }
+ 
+ void AmpIRs::loadIRFromCurrentState()
+diff --git a/src/headless/tests/DSPMemoryReleaseTest.cpp b/src/headless/tests/DSPMemoryReleaseTest.cpp
+new file mode 100644
+--- /dev/null
++++ b/src/headless/tests/DSPMemoryReleaseTest.cpp
+@@ -0,0 +1,119 @@
++#include "UnitTests.h"
++#include "processors/tone/amp_irs/AmpIRs.h"
++#include "processors/chain/ProcessorChainStateHelper.h"
++
++#if JUCE_MAC
++#include <malloc/malloc.h>
++#endif
++
++class DSPMemoryReleaseTest : public UnitTest
++{
++public:
++    DSPMemoryReleaseTest() : UnitTest ("DSP Memory Release Test") {}
++
++    void runTest() override
++    {
++        PlayheadHelpers playhead;
++        for (const auto& name : { "Amp IRs", "LoFi IRs", "Chorus", "Flanger", "Rotary", "Delay", "Bass Face", "Metal Face" })
++        {
++            beginTest (String { name } + " releases DSP memory while retained for undo");
++            auto proc = ProcessorStore::getStoreMap().at (name).factory (nullptr);
++            proc->playheadHelpers = &playhead;
++            if (String { name } == "Amp IRs")
++            {
++                auto* ir = proc->getVTS().getParameter ("ir");
++                ir->setValueNotifyingHost (ir->convertTo0to1 (3.0f));
++            }
++
++            for (int cycle = 0; cycle < 3; ++cycle)
++            {
++                proc->prepareProcessing (48000.0, 512);
++                Thread::sleep (100); // let convolution jobs finish before measuring
++                const auto state = proc->toXML();
++#if JUCE_MAC
++                malloc_statistics_t before {};
++                malloc_zone_statistics (nullptr, &before);
++#endif
++                proc->freeInternalMemory();
++                Thread::sleep (100);
++#if JUCE_MAC
++                malloc_statistics_t after {};
++                malloc_zone_statistics (nullptr, &after);
++                // Measure live allocations, rather than pages cached by the allocator.
++                const auto minimumReleased = String { name } == "LoFi IRs" ? 1024u : 128 * 1024u;
++                expect (before.size_in_use > after.size_in_use + minimumReleased,
++                        "Retained processor must release its convolution/delay allocation");
++#endif
++                expect (state->isEquivalentTo (proc->toXML().get(), true), "Undo state must survive releasing DSP memory");
++                proc->freeInternalMemory(); // cleanup must also be safe when already released
++                proc->prepareProcessing (48000.0, 512); // undo/redo recreates the engine
++                AudioBuffer<float> buffer { 2, 512 };
++                for (int block = 0; block < 4; ++block)
++                {
++                    buffer.clear();
++                    buffer.setSample (0, 0, 1.0f);
++                    buffer.setSample (1, 0, 1.0f);
++                    proc->processAudioBlock (buffer);
++                    expect (chowdsp::BufferMath::sanitizeBuffer<AudioBuffer<float>, float> (buffer));
++                }
++                proc->freeInternalMemory();
++            }
++        }
++
++#if JUCE_MAC
++        beginTest ("Preset undo/redo rebuilds released DSP engines");
++        for (const auto& name : { "Bass Face", "Chopped Flange", "Mixed In Modulation" })
++        {
++            BYOD plugin;
++            plugin.prepareToPlay (48000.0, 512);
++            int index = -1;
++            for (int i = 0; i < plugin.getNumPrograms(); ++i)
++                if (plugin.getProgramName (i) == name)
++                    index = i;
++            expect (index >= 0, String { "Missing factory preset: " } + name);
++            if (index < 0)
++                continue;
++
++            plugin.setCurrentProgram (index);
++            MessageManager::getInstance()->runDispatchLoopUntil (100);
++            const auto state = plugin.getProcChain().getStateHelper().saveProcChain (true);
++            plugin.setCurrentProgram (0);
++            MessageManager::getInstance()->runDispatchLoopUntil (100);
++            expect (plugin.getUndoManager().undo());
++            const auto restoredState = plugin.getProcChain().getStateHelper().saveProcChain (true);
++            // I/O node positions are not undoable in BYOD; compare DSP state and routing.
++            for (auto* chainState : { state.get(), restoredState.get() })
++                for (const auto& ioName : { "Input", "Output" })
++                    if (auto* io = chainState->getChildByName (ioName))
++                        if (auto* parameters = io->getChildByName ("Parameters"))
++                        {
++                            parameters->removeAttribute ("x_pos");
++                            parameters->removeAttribute ("y_pos");
++                        }
++            expect (state->isEquivalentTo (restoredState.get(), true));
++            AudioBuffer<float> buffer { 2, 512 };
++            buffer.clear();
++            buffer.setSample (0, 0, 1.0f);
++            buffer.setSample (1, 0, 1.0f);
++            MidiBuffer midi;
++            plugin.processBlock (buffer, midi);
++            expect (chowdsp::BufferMath::sanitizeBuffer<AudioBuffer<float>, float> (buffer));
++            expect (plugin.getUndoManager().redo());
++            expectEquals (plugin.getProcChain().getProcessors().size(), 0);
++        }
++#endif
++
++        beginTest ("Custom Amp IR survives release and reprepare");
++        AmpIRs irs;
++        const auto irFile = File { BYOD_ROOT_DIR }.getChildFile ("src/headless/tests/test_ir.wav");
++        irs.loadIRFromStream (irFile.createInputStream());
++        irs.prepareProcessing (48000.0, 512);
++        const auto state = irs.toXML();
++        irs.freeInternalMemory();
++        irs.prepareProcessing (48000.0, 512);
++        expect (state->isEquivalentTo (irs.toXML().get(), true));
++        irs.freeInternalMemory();
++    }
++};
++
++static DSPMemoryReleaseTest dspMemoryReleaseTest;
+
+diff --git a/modules/chowdsp_utils/modules/dsp/chowdsp_dsp_utils/Delay/chowdsp_DelayLine.cpp b/modules/chowdsp_utils/modules/dsp/chowdsp_dsp_utils/Delay/chowdsp_DelayLine.cpp
+index e1b1c90..3dfe964 100644
+--- a/modules/chowdsp_utils/modules/dsp/chowdsp_dsp_utils/Delay/chowdsp_DelayLine.cpp
++++ b/modules/chowdsp_utils/modules/dsp/chowdsp_dsp_utils/Delay/chowdsp_DelayLine.cpp
+@@ -84,7 +84,8 @@ void DelayLine<SampleType, InterpolationType, StorageType>::prepare (const juce:
+ template <typename SampleType, typename InterpolationType, typename StorageType>
+ void DelayLine<SampleType, InterpolationType, StorageType>::free()
+ {
+-    this->bufferData.setMaxSize (0, 0);
++    // setMaxSize (0, 0) clears the vector size but retains its allocation.
++    this->bufferData = {};
+ 
+     this->writePos.clear();
+     this->readPos.clear();

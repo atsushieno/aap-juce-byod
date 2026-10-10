@@ -1,18 +1,36 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 4ce5c94..2935f50 100644
+index 4ce5c94..a468a5e 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -125,6 +125,9 @@ if(BYOD_BUILD_CLAP)
+@@ -1,4 +1,16 @@
+-cmake_minimum_required(VERSION 3.15)
++cmake_minimum_required(VERSION 3.22)
++
++get_filename_component(app_source "${CMAKE_CURRENT_LIST_DIR}" REALPATH)
++add_subdirectory("${app_source}/../aap-juce" "${CMAKE_CURRENT_BINARY_DIR}/aap-juce" EXCLUDE_FROM_ALL)
++aap_juce_configure(JUCE_SOURCE_DIR modules/JUCE ICON res/logo.png ADOPT_EXISTING_PATCHES)
++
++if(CMAKE_SYSTEM_NAME STREQUAL "Android")
++    set(BYOD_BUILD_CLAP OFF CACHE BOOL "Build only the Android plugin" FORCE)
++    set(BUILD_TESTS OFF CACHE BOOL "Build only the Android plugin" FORCE)
++    set(BUILD_BENCH OFF CACHE BOOL "Build only the Android plugin" FORCE)
++    set(BUILD_EXAMPLES OFF CACHE BOOL "Build only the Android plugin" FORCE)
++endif()
++
+ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12" CACHE STRING "Minimum OS X deployment target")
+ if(WIN32)
+     set(CMAKE_SYSTEM_VERSION 7.1 CACHE STRING INTERNAL FORCE) # Windows SDK for Windows 7 and up
+@@ -125,6 +137,9 @@ if(BYOD_BUILD_CLAP)
      )
  endif()
- 
+
 +# this has to be placed before juce_generate_juce_header()...
 +juce_add_modules(${AAP_JUCE_DIR}/aap-modules/aap_audio_processors)
 +
  juce_generate_juce_header(BYOD)
  add_subdirectory(src)
  include_directories(src)
-@@ -146,3 +149,49 @@ option(BYOD_BUILD_ADD_ON_MODULES "Build BYOD with add-on modules" OFF)
+@@ -146,3 +161,51 @@ option(BYOD_BUILD_ADD_ON_MODULES "Build BYOD with add-on modules" OFF)
  if(BYOD_BUILD_ADD_ON_MODULES)
      add_subdirectory(modules/BYOD-add-ons)
  endif()
@@ -62,6 +80,8 @@ index 4ce5c94..2935f50 100644
 +target_link_libraries(BYOD PRIVATE aap_audio_processors)
 +
 +# <-- end AAP specifics
++
++aap_juce_plugin(TARGET BYOD)
 diff --git a/modules/CMakeLists.txt b/modules/CMakeLists.txt
 index f3b5a52..6fcb716 100644
 --- a/modules/CMakeLists.txt
@@ -791,3 +811,18 @@ index e1b1c90..3dfe964 100644
  
      this->writePos.clear();
      this->readPos.clear();
+diff --git a/modules/RTNeural/CMakeLists.txt b/modules/RTNeural/CMakeLists.txt
+index d1bf3a7..862302e 100644
+--- a/modules/RTNeural/CMakeLists.txt
++++ b/modules/RTNeural/CMakeLists.txt
+@@ -6,7 +6,9 @@ add_subdirectory(RTNeural)
+
+ include(cmake/SIMDExtensions.cmake)
+ include(cmake/ChooseBackend.cmake)
+-include(cmake/CPM.cmake)
++if(NOT ANDROID)
++    include(cmake/CPM.cmake)
++endif()
+ include(cmake/Testing.cmake)
+
+ option(BUILD_TESTS "Build RTNeural accuracy tests" OFF)

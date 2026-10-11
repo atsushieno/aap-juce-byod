@@ -16,7 +16,7 @@ android {
         externalNativeBuild {
             cmake {
                 targets 'BYOD_Standalone'
-                arguments "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+                arguments "-DCMAKE_BUILD_TYPE=Release",
                     "-DANDROID_STL=c++_shared", "-DANDROID_CPP_FEATURES=exceptions rtti", "-DANDROID_ARM_NEON=ON"
             }
         }
